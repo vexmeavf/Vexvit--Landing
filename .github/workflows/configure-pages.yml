@@ -1,0 +1,38 @@
+name: Configure GitHub Pages
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/configure-pages.yml
+
+permissions:
+  pages: write
+
+jobs:
+  configure:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Publish from the main branch root
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          if gh api "repos/${REPO}/pages" > /tmp/pages.json 2>/tmp/pages.err; then
+            echo "Pages site already exists; updating source to main:/"
+            gh api --method PUT "repos/${REPO}/pages" \
+              -f build_type=legacy \
+              -f "source[branch]=main" \
+              -f "source[path]=/"
+          else
+            echo "Pages site is not configured yet; creating it from main:/"
+            cat /tmp/pages.err
+            gh api --method POST "repos/${REPO}/pages" \
+              -f build_type=legacy \
+              -f "source[branch]=main" \
+              -f "source[path]=/"
+          fi
+          echo "----- current pages config -----"
+          gh api "repos/${REPO}/pages"
